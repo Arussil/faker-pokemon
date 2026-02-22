@@ -1,6 +1,6 @@
 # faker_pokemon
 
-Faker community provider for Pokemon data.
+Faker community provider that overrides standard Faker methods with Pokemon-themed data.
 
 ## Installation
 
@@ -17,20 +17,50 @@ from faker_pokemon import PokemonProvider
 fake = Faker()
 fake.add_provider(PokemonProvider)
 
-fake.pokemon_name()   # "Pikachu"
-fake.pokemon_type()   # "Fire"
-fake.pokemon_move()   # "Thunderbolt"
-fake.pokemon()        # {"name": "Charizard", "type": "Dragon", "move": "Flamethrower"}
+# Standard Faker methods, now Pokemon-themed
+fake.company()          # "Silph Co."
+fake.city()             # "Cerulean City"
+fake.country()          # "Kanto"
+fake.first_name()       # "Pikachu"
+fake.full_name()        # "Charizard Fire"
+fake.product_name()     # "Ultra Ball"
+
+# Pokemon-specific methods
+fake.pokemon_name()     # "Bulbasaur"
+fake.pokemon_type()     # "Water"
+fake.pokemon_move()     # "Thunderbolt"
+fake.pokemon_ability()  # "Levitate"
+fake.pokemon_nature()   # "Jolly"
+fake.pokemon_berry()    # "Oran"
 ```
 
 ## Available methods
 
-| Method           | Returns                              |
-|------------------|--------------------------------------|
-| `pokemon_name()` | A random Pokemon name (`str`)        |
-| `pokemon_type()` | A random Pokemon type (`str`)        |
-| `pokemon_move()` | A random Pokemon move (`str`)        |
-| `pokemon()`      | A dict with `name`, `type`, `move`   |
+### Standard Faker overrides
+
+| Method             | Returns                                    |
+|--------------------|--------------------------------------------|
+| `company()`        | A Pokemon world company (`str`)            |
+| `company_suffix()` | A company suffix (`str`)                   |
+| `city()`           | A Pokemon location (`str`)                 |
+| `country()`        | A Pokemon region (`str`)                   |
+| `street_name()`    | A Pokemon-themed street name (`str`)       |
+| `first_name()`     | A Pokemon name (`str`)                     |
+| `last_name()`      | A Pokemon type (`str`)                     |
+| `full_name()`      | A Pokemon name + type (`str`)              |
+| `product_name()`   | A Pokemon item (`str`)                     |
+| `product_category()`| A Pokemon item category (`str`)           |
+
+### Pokemon-specific methods
+
+| Method              | Returns                              |
+|---------------------|--------------------------------------|
+| `pokemon_name()`    | A random Pokemon name (`str`)        |
+| `pokemon_type()`    | A random Pokemon type (`str`)        |
+| `pokemon_move()`    | A random Pokemon move (`str`)        |
+| `pokemon_ability()` | A random Pokemon ability (`str`)     |
+| `pokemon_nature()`  | A random Pokemon nature (`str`)      |
+| `pokemon_berry()`   | A random Pokemon berry (`str`)       |
 
 ## Updating data
 
@@ -43,7 +73,7 @@ uv run scripts/update_data.py
 PokeAPI is a free, open API with no authentication required.
 Please respect their [fair use policy](https://pokeapi.co/docs/v2):
 
-- Do not make excessive requests — the update script only needs 3 calls
+- Do not make excessive requests — the update script only needs ~10 calls
 - Cache locally (which is exactly what this package does by committing the data)
 - Do not abuse the service — it is primarily an educational tool
 

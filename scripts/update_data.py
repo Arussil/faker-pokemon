@@ -1,8 +1,9 @@
+# uv inline script metadata (PEP 723)
 # /// script
 # dependencies = ["httpx"]
 # requires-python = ">=3.14"
 # ///
-"""Fetch Pokemon names, types, and moves from PokeAPI and update pokemon_data.py."""
+"""Fetch Pokemon data from PokeAPI and update pokemon_data.py."""
 
 import textwrap
 from pathlib import Path
@@ -11,52 +12,88 @@ import httpx
 
 POKEAPI_BASE = "https://pokeapi.co/api/v2"
 TARGET = Path(__file__).resolve().parent.parent / "src" / "faker_pokemon" / "pokemon_data.py"
-
-
-def fetch_names(client: httpx.Client) -> tuple[str, ...]:
-    r = client.get(f"{POKEAPI_BASE}/pokemon-species?limit=2000")
-    r.raise_for_status()
-    species = r.json()["results"]
-    # Sort by pokedex number (extracted from URL: .../pokemon-species/{id}/)
-    species.sort(key=lambda s: int(s["url"].rstrip("/").split("/")[-1]))
-    return tuple(s["name"].capitalize() for s in species)
-
-
-def fetch_types(client: httpx.Client) -> tuple[str, ...]:
-    r = client.get(f"{POKEAPI_BASE}/type")
-    r.raise_for_status()
-    return tuple(
-        t["name"].capitalize()
-        for t in r.json()["results"]
-        if t["name"] not in ("unknown", "shadow")
-    )
-
-
-def fetch_moves(client: httpx.Client) -> tuple[str, ...]:
-    r = client.get(f"{POKEAPI_BASE}/move?limit=2000")
-    r.raise_for_status()
-    return tuple(m["name"].replace("-", " ").title() for m in r.json()["results"])
-
-
-def format_tuple(name: str, items: tuple[str, ...]) -> str:
-    entries = "\n".join(f'    "{item}",' for item in items)
-    return f"{name}: tuple[str, ...] = (\n{entries}\n)"
+ENDPOINTS: dict[str, dict] = {
+    "POKEMON_NAMES": dict(endpoint="pokemon-species", limit=2000, sort_by_id=True),
+    "POKEMON_TYPES": dict(endpoint="type", limit=100),
+    "POKEMON_MOVES": dict(endpoint="move", limit=2000, titleize=True),
+    "POKEMON_REGIONS": dict(endpoint="region", limit=100),
+    "POKEMON_LOCATIONS": dict(endpoint="location", limit=1000, titleize=True),
+    "POKEMON_ITEMS": dict(endpoint="item", limit=2500, titleize=True),
+    "POKEMON_ITEM_CATEGORIES": dict(endpoint="item-category", limit=100, titleize=True),
+    "POKEMON_ABILITIES": dict(endpoint="ability", limit=400, titleize=True),
+    "POKEMON_NATURES": dict(endpoint="nature", limit=25),
+    "POKEMON_BERRIES": dict(endpoint="berry", limit=100),
+}
+POKEMON_COMPANIES: tuple[str, ...] = (
+    "Silph Co.",
+    "Devon Corporation",
+    "Lysandre Labs",
+    "Macro Cosmos",
+    "Aether Foundation",
+    "Team Rocket Corporation",
+    "Pokemon Fan Club",
+    "Global Trade Station",
+    "Poketch Company",
+    "Battle Company",
+    "Castelia Cone",
+    "LPokemon",
+    "Pokestar Studios",
+    "Lumiose Press",
+    "Mauville Game Corner",
+    "Galactic Energy",
+    "Future Industries",
+    "Rose Tower Corp.",
+    "Treasure Town Guild",
+    "Ranger Union",
+)
+POKEMON_COMPANY_SUFFIXES: tuple[str, ...] = (
+    "Co.",
+    "Corp.",
+    "Corporation",
+    "Labs",
+    "Foundation",
+    "Industries",
+    "Inc.",
+    "Group",
+    "Guild",
+    "Union",
+)
+POKEMON_STREET_SUFFIXES: tuple[str, ...] = (
+    "Road",
+    "Route",
+    "Path",
+    "Trail",
+    "Avenue",
+    "Way",
+    "Lane",
+    "Bridge",
+    "Tunnel",
+    "Pass",
+)
 
 
 def main() -> None:
+    tuples: dict[str, tuple[str, ...]] = {}
     with httpx.Client(timeout=30) as client:
-        print("Fetching pokemon names...")
-        names = fetch_names(client)
-        print(f"  {len(names)} pokemon")
-
-        print("Fetching types...")
-        types = fetch_types(client)
-        print(f"  {len(types)} types")
-
-        print("Fetching moves...")
-        moves = fetch_moves(client)
-        print(f"  {len(moves)} moves")
-
+        for var_name, conf in ENDPOINTS.items():
+            endpoint = conf["endpoint"]
+            limit = conf["limit"]
+            sort_by_id = conf.get("sort_by_id", False)
+            titleize = conf.get("titleize", False)
+            print(f"Fetching {endpoint}...")
+            r = client.get(f"{POKEAPI_BASE}/{endpoint}?limit={limit}")
+            r.raise_for_status()
+            results = r.json()["results"]
+            if sort_by_id:
+                results.sort(key=lambda s: int(s["url"].rstrip("/").split("/")[-1]))
+            tuples[var_name] = tuple(
+                item["name"].replace("-", " ").title() if titleize else item["name"].capitalize()
+                for item in results
+            )
+            print(f"  {len(tuples[var_name])} entries")
+    tuples["POKEMON_COMPANIES"] = POKEMON_COMPANIES
+    tuples["POKEMON_COMPANY_SUFFIXES"] = POKEMON_COMPANY_SUFFIXES
+    tuples["POKEMON_STREET_SUFFIXES"] = POKEMON_STREET_SUFFIXES
     content = textwrap.dedent("""\
         \"\"\"Pokemon data for the faker_pokemon provider.
 
@@ -65,14 +102,9 @@ def main() -> None:
         \"\"\"
 
     """)
-    content += "# All Pokemon names, National Pokedex order\n"
-    content += format_tuple("POKEMON_NAMES", names)
-    content += "\n\n# All 18 Pokemon types\n"
-    content += format_tuple("POKEMON_TYPES", types)
-    content += "\n\n# All Pokemon moves\n"
-    content += format_tuple("POKEMON_MOVES", moves)
-    content += "\n"
-
+    for name, data in tuples.items():
+        entries = "\n".join(f'    "{item}",' for item in data)
+        content += f"{name}: tuple[str, ...] = (\n{entries}\n)\n\n"
     TARGET.write_text(content)
     print(f"\nWritten to {TARGET}")
 

@@ -2,6 +2,6 @@
 
 __version__ = "0.1.0"
 
-from .provider import PokemonProvider
+from faker_pokemon.provider import PokemonProvider
 
 __all__ = ["PokemonProvider"]
